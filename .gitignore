@@ -1,0 +1,5 @@
+mysqldata/**
+redisdata/**
+
+!mysqldata/.keep
+!redisdata/.keep

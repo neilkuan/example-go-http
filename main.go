@@ -1,33 +1,47 @@
 package main
 
 import (
-	"fmt"
-	"io"
+	"context"
 	"log"
-	"math/rand"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
-// Simple example HTTP service for trying out Beyla.
-// 20% of calls will fail with HTTP status 500.
-
-func handleRequest(rw http.ResponseWriter, _ *http.Request) {
-	time.Sleep(time.Duration(rand.Float64()*400.0) * time.Millisecond)
-	if rand.Int31n(100) < 80 {
-		rw.WriteHeader(200)
-		if _, err := io.WriteString(rw, "Hello from the example HTTP service.\n"); err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		rw.WriteHeader(500)
-		if _, err := io.WriteString(rw, "Simulating an error response with HTTP status 500.\n"); err != nil {
-			log.Fatal(err)
-		}
-	}
-}
-
 func main() {
-	fmt.Println("Listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", http.HandlerFunc(handleRequest)))
+	r := SetupRouter()
+
+	srv := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
+	}
+
+	// Initializing the server in a goroutine so that
+	// it won't block the graceful shutdown handling below
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
+		}
+	}()
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	// kill (no param) default send syscall.SIGTERM
+	// kill -2 is syscall.SIGINT
+	// kill -9 is syscall.SIGKILL but can't be catch, so don't need add it
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// The context is used to inform the server it has 5 seconds to finish
+	// the request it is currently handling
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown: ", err)
+	}
+
+	log.Println("Server exiting")
 }
