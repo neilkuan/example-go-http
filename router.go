@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,23 +15,17 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Simple example HTTP service for trying out Beyla.
-// 20% of calls will fail with HTTP status 500.
+func randInt(min, max int) int {
+	return min + rand.Intn(max-min)
+}
 
 func HandleRequest(c *gin.Context) {
-	time.Sleep(time.Duration(rand.Float64()*400.0) * time.Millisecond)
-	if rand.Int31n(100) < 80 {
-		c.JSON(
-			http.StatusOK,
-			"Hello from the example HTTP service.",
-		)
-	} else {
-
-		c.JSON(
-			http.StatusInternalServerError,
-			"Simulating an error response with HTTP status 500.",
-		)
-	}
+	sleepTime := randInt(55, 65) * 1000
+	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+	c.JSON(
+		http.StatusOK,
+		fmt.Sprintf("Hello from the example HTTP service. %v", sleepTime),
+	)
 }
 
 func NewRedisConnect(host string) *redis.Client {
