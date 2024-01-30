@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=linux/amd64 golang:1.21 AS build-stage
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/golang:1.21.6-alpine AS build-stage
 
 WORKDIR /app
 
@@ -12,14 +12,14 @@ COPY *.go ./
 RUN CGO_ENABLED=0 GOOS=linux go build -o /worker
 
 # Deploy the application binary into a lean image
-FROM --platform=linux/amd64 gcr.io/distroless/base-debian11 AS build-release-stage
-
+FROM --platform=linux/amd64 public.ecr.aws/docker/library/alpine:latest AS build-release-stage
 WORKDIR /
-
+ENV MIN_SEC 55
+ENV MAC_SEC 65
 COPY --from=build-stage /worker /worker
 
 EXPOSE 8080
 
-USER nonroot:nonroot
+USER root:root
 
 ENTRYPOINT ["/worker"]

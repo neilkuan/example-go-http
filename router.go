@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"math/rand"
 	"time"
@@ -20,8 +21,24 @@ func randInt(min, max int) int {
 }
 
 func HandleRequest(c *gin.Context) {
-	sleepTime := randInt(55, 65) * 1000
-	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+	minSecValue := int(55)
+	if minSec, ok := os.LookupEnv("MIN_SEC"); ok {
+		v, err := strconv.Atoi(minSec)
+		if err != nil {
+			fmt.Println("Can't convert this to an int!")
+		}
+		minSecValue = int(v)
+	}
+	maxSecValue := int(55)
+	if maxSec, ok := os.LookupEnv("MAX_SEC"); ok {
+		v, err := strconv.Atoi(maxSec)
+		if err != nil {
+			fmt.Println("Can't convert this to an int!")
+		}
+		maxSecValue = int(v)
+	}
+	sleepTime := randInt(minSecValue, maxSecValue)
+	time.Sleep(time.Duration(sleepTime) * time.Second)
 	c.JSON(
 		http.StatusOK,
 		fmt.Sprintf("Hello from the example HTTP service. %v", sleepTime),
